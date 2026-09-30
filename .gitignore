@@ -1,0 +1,23 @@
+# Local Codex/editor cache
+.dsh-mattskillsdeck-cache/
+.vscode/
+.idea/
+
+# Private source material and backups
+备份/
+资料库/
+资料库进度/
+资料库进度.md
+
+# Repository-local utilities outside the public work package
+/工具/
+
+# Local instruction files
+/AGENTS.md
+
+# PowerShell and OS noise
+*.tmp
+*.bak
+*.log
+Thumbs.db
+desktop.ini
