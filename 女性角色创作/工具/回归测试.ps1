@@ -62,7 +62,9 @@ try {
     [IO.File]::WriteAllText($negativePerson, $invalidPerson, [Text.UTF8Encoding]::new($false))
     $wardrobe007 = Join-Path (Join-Path $workRoot '输出\搭配') '007-林予宁.md'
     $negativeOutput = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $checker -PersonPath $negativePerson -WardrobePath $wardrobe007 -RequireDetailedProfile 2>&1 | Out-String
-    Assert ($LASTEXITCODE -eq 1 -and $negativeOutput -match '人物速写须为连贯正文') '检查工具未拒绝条目式速写'
+    $negativeExitCode = $LASTEXITCODE
+    Assert ($negativeExitCode -eq 1 -and $negativeOutput -match '人物速写须为连贯正文') '检查工具未拒绝条目式速写'
+    $global:LASTEXITCODE = 0
 }
 finally {
     Remove-Item -LiteralPath $negativePerson -ErrorAction SilentlyContinue
@@ -78,7 +80,9 @@ try {
     [IO.File]::WriteAllText($behaviorNegativePerson, $invalidBehaviorPerson, [Text.UTF8Encoding]::new($false))
     $wardrobe008 = Join-Path (Join-Path $workRoot '输出\搭配') '008-顾清宁.md'
     $behaviorNegativeOutput = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $checker -PersonPath $behaviorNegativePerson -WardrobePath $wardrobe008 -RequireDetailedProfile 2>&1 | Out-String
-    Assert ($LASTEXITCODE -eq 1 -and $behaviorNegativeOutput -match '行为画像须为不少于45字的连贯正文') '检查工具未拒绝条目式行为画像'
+    $behaviorNegativeExitCode = $LASTEXITCODE
+    Assert ($behaviorNegativeExitCode -eq 1 -and $behaviorNegativeOutput -match '行为画像须为不少于45字的连贯正文') '检查工具未拒绝条目式行为画像'
+    $global:LASTEXITCODE = 0
 }
 finally {
     Remove-Item -LiteralPath $behaviorNegativePerson -ErrorAction SilentlyContinue
