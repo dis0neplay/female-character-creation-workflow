@@ -5,17 +5,25 @@ on:
   pull_request:
 
 jobs:
-  regression:
+  regression-pwsh:
     runs-on: windows-latest
-    strategy:
-      matrix:
-        shell: [pwsh, powershell]
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
       - name: Run regression tests
-        shell: ${{ matrix.shell }}
+        shell: pwsh
         run: .\女性角色创作\工具\回归测试.ps1
       - name: Check repository contains methods only
-        shell: ${{ matrix.shell }}
+        shell: pwsh
+        run: .\女性角色创作\工具\检查仓库边界.ps1
+  regression-windows-powershell:
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Run regression tests
+        shell: powershell
+        run: .\女性角色创作\工具\回归测试.ps1
+      - name: Check repository contains methods only
+        shell: powershell
         run: .\女性角色创作\工具\检查仓库边界.ps1
