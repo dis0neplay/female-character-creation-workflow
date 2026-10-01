@@ -8,6 +8,7 @@
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
 $errors = [System.Collections.Generic.List[string]]::new()
+$warnings = [System.Collections.Generic.List[string]]::new()
 if (-not (Test-Path -LiteralPath $PersonPath -PathType Leaf)) { $errors.Add('人物文件不存在') }
 if (-not (Test-Path -LiteralPath $WardrobePath -PathType Leaf)) { $errors.Add('搭配文件不存在') }
 if ($errors.Count) { @{ '通过' = $false; '错误' = $errors } | ConvertTo-Json -Compress; exit 1 }
@@ -15,6 +16,13 @@ if ($errors.Count) { @{ '通过' = $false; '错误' = $errors } | ConvertTo-Json
 $person = Get-Content -LiteralPath $PersonPath -Encoding UTF8 -Raw
 $wardrobe = Get-Content -LiteralPath $WardrobePath -Encoding UTF8 -Raw
 if ([IO.Path]::GetFileName($PersonPath) -ne [IO.Path]::GetFileName($WardrobePath)) { $errors.Add('两个文件的编号与姓名不一致') }
+$number = [regex]::Match($person, '(?m)^- 编号：[ \t]*([^\r\n]+)').Groups[1].Value.Trim()
+$name = [regex]::Match($person, '(?m)^- 姓名：[ \t]*([^\r\n]+)').Groups[1].Value.Trim()
+$wardrobeNumber = [regex]::Match($wardrobe, '(?m)^- 编号：[ \t]*([^\r\n]+)').Groups[1].Value.Trim()
+$wardrobeName = [regex]::Match($wardrobe, '(?m)^- 人物：[ \t]*([^\r\n]+)').Groups[1].Value.Trim()
+if ($number -notmatch '^\d{3,}$' -or $number -ne $wardrobeNumber) { $errors.Add('人物与搭配的编号字段无效或不一致') }
+if (-not $name -or $name -ne $wardrobeName) { $errors.Add('人物与搭配的姓名字段不一致') }
+if ([IO.Path]::GetFileNameWithoutExtension($PersonPath) -ne "${number}-${name}") { $errors.Add('文件名与编号、姓名字段不一致') }
 $hairLine = [regex]::Match($person, '(?m)^- 头发颜色与样式：(.+)$').Groups[1].Value
 $shortHair = $hairLine -match '耳上短发|齐耳|齐颌|耳下短发|下巴短发|耳下'
 
@@ -49,8 +57,8 @@ if ($person -match '当前穿着|换装记录|(?m)^## .*搭配|(?m)^- (内衣|�
 if ($person -match '<!--|(?m)^## 校验记录') { $errors.Add('人物文件含注释或校验日志') }
 if ($wardrobe -match '<!--|(?m)^## 校验记录') { $errors.Add('搭配文件含注释或校验日志') }
 
-$sceneMatches = [regex]::Matches($wardrobe, '(?m)^## (.+)$')
-$sceneTitles = @($sceneMatches | ForEach-Object { $_.Groups[1].Value })
+$sceneMatches = [regex]::Matches($wardrobe, '(?m)^## ([^\r\n]+)\r?$')
+$sceneTitles = @($sceneMatches | ForEach-Object { $_.Groups[1].Value.Trim() })
 if ($ExpectedScenes) {
     $confirmedScenes = @($ExpectedScenes -split '\|' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
     if ($confirmedScenes.Count -eq 0) { $errors.Add('未提供有效的已确认场景') }
@@ -66,7 +74,8 @@ for ($i = 0; $i -lt $sceneMatches.Count; $i++) {
     $start = $sceneMatches[$i].Index + $sceneMatches[$i].Length
     $end = if ($i + 1 -lt $sceneMatches.Count) { $sceneMatches[$i + 1].Index } else { $wardrobe.Length }
     $section = $wardrobe.Substring($start, $end - $start)
-    $outfits = [regex]::Matches($section, '(?m)^### 方案 \d+[^\r\n]*$')
+    $outfits = [regex]::Matches($section, '(?m)^### 方案 \d+[^\r\n]*\r?$')
+    $sharedContext = if ($outfits.Count) { $section.Substring(0, $outfits[0].Index) } else { '' }
     if ($outfits.Count -lt 2) { $errors.Add("$($sceneTitles[$i]) 少于两套") }
     for ($j = 0; $j -lt $outfits.Count; $j++) {
         $from = $outfits[$j].Index + $outfits[$j].Length
@@ -105,10 +114,10 @@ for ($i = 0; $i -lt $sceneMatches.Count; $i++) {
         if ($underwearLine -match '无钢圈' -and $underwearLine -match '软钢圈|有钢圈|(?<!无)钢圈文胸|(?<!无)钢圈罩杯') {
             $errors.Add("$($sceneTitles[$i]) 方案 $($j + 1) 内衣同时写无钢圈和钢圈")
         }
-        if ($shortHair -and $hairStyleLine -match '马尾|发髻|盘发|丸子头') {
+        if ($shortHair -and $hairStyleLine -match '马尾|发髻|盘发|丸子头' -and $hairStyleLine -notmatch '假发|接发') {
             $errors.Add("$($sceneTitles[$i]) 方案 $($j + 1) 发型超出人物发长")
         }
-        $coldContext = "$($sceneTitles[$i]) $section"
+        $coldContext = "$($sceneTitles[$i]) $sharedContext $($outfits[$j].Value) $outfit"
         if (($coldContext -match '零下|寒冷|冰雪|大雪|严寒|低温|冬季|室外\s*[−-]\s*[0-9]{1,2}|[−-][0-9]{1,2}\s*[至到~～-]\s*[−-]?[0-9]{1,2}\s*°?C?') -and
             $clothesLine -notmatch '大衣|羽绒|棉服|风衣|厚外套|冲锋衣|派克|呢外套|皮草|保暖外套') {
             $errors.Add("$($sceneTitles[$i]) 方案 $($j + 1) 寒冷户外缺少保暖外层")
@@ -125,8 +134,9 @@ for ($i = 0; $i -lt $sceneMatches.Count; $i++) {
     }
 }
 
-$ageMatch = [regex]::Match($person, '(?m)^- 年龄：\s*(\d+)')
-if ($ageMatch.Success -and [int]$ageMatch.Groups[1].Value -lt 18) { $errors.Add('人物年龄低于 18 岁') }
+$ageMatch = [regex]::Match($person, '(?m)^- 年龄：[ \t]*(\d{1,3})[ \t]*(?:岁)?[ \t]*\r?$')
+if (-not $ageMatch.Success) { $errors.Add('人物年龄必须为明确的整数') }
+elseif ([int]$ageMatch.Groups[1].Value -lt 18) { $errors.Add('人物年龄低于 18 岁') }
 $measureMatch = [regex]::Match($person, '(?m)^- 三围：(.+)$')
 if ($RequireDetailedProfile -and $measureMatch.Success -and $measureMatch.Groups[1].Value -notmatch '待定') {
     $measureLine = $measureMatch.Groups[1].Value
@@ -168,12 +178,15 @@ if ($measureMatch.Success -and $measureMatch.Groups[1].Value -notmatch '待定')
     if ($weightMatch.Success -and $heightMatch.Success -and $bodyMatch.Success) {
         $weight = [double]::Parse($weightMatch.Groups[1].Value, [Globalization.CultureInfo]::InvariantCulture)
         $height = [double]::Parse($heightMatch.Groups[1].Value, [Globalization.CultureInfo]::InvariantCulture) / 100
-        $bmi = $weight / ($height * $height)
-        $bmiRanges = @{ '纤瘦' = @(20.0,21.6); '匀称' = @(20.2,22.2); '丰腴' = @(20.6,23.4) }
-        $range = $bmiRanges[$bodyMatch.Groups[1].Value]
-        if ($bmi -lt $range[0] - 0.1 -or $bmi -gt $range[1] + 0.1) { $errors.Add('体重与身高、体型不一致') }
+        if ($height -le 0 -or $weight -le 0) { $errors.Add('身高和体重必须大于零') }
+        else {
+            $bmi = $weight / ($height * $height)
+            $bmiRanges = @{ '纤瘦' = @(20.0,21.6); '匀称' = @(20.2,22.2); '丰腴' = @(20.6,23.4) }
+            $range = $bmiRanges[$bodyMatch.Groups[1].Value]
+            if ($bmi -lt $range[0] - 0.1 -or $bmi -gt $range[1] + 0.1) { $warnings.Add('体重超出抽样参考区间；核对作者设定，不自动改写') }
+        }
     }
 }
 
-@{ '通过' = ($errors.Count -eq 0); '错误' = @($errors) } | ConvertTo-Json -Compress -Depth 3
+@{ '通过' = ($errors.Count -eq 0); '错误' = @($errors); '提示' = @($warnings) } | ConvertTo-Json -Compress -Depth 3
 if ($errors.Count) { exit 1 }

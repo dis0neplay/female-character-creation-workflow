@@ -1,15 +1,9 @@
-# Agent instructions
+# 工作区入口
 
-## Agent skills
+当作者要求新建、修改或检查女性角色、人物档案、场景搭配，或调整女性角色生成流程时，读取 `女性角色创作/AGENTS.md`，并按其中的流程执行。该工作包的规则与工具都在 `女性角色创作/`，交付文件在本目录的 `输出/人物/` 与 `输出/搭配/`。
 
-### Issue tracker
+其他任务按作者的要求处理；`资料库/` 与 `资料库进度/` 不属于女性角色创作流程。
 
-Issues and specs are tracked in GitHub Issues for `dis0neplay/dsh-skill` using the `gh` CLI. See `docs/agents/issue-tracker.md`.
+仓库只保存生成方法：规则、空白模板、工具、测试和使用说明。当前及后续生成的人物、搭配、关系网、草稿和待扩展事项统一保存在本机 `输出/` 下，由 Git 忽略；提交前运行 `女性角色创作/工具/检查仓库边界.ps1`。
 
-### Triage labels
-
-Use the default five triage labels and the complete Wayfinder label set documented in `docs/agents/triage-labels.md`; follow skill-specific labeling rules without extra mandatory labels.
-
-### Domain docs
-
-This is a single-context repository; consult root `CONTEXT.md` and `docs/adr/` when relevant. See `docs/agents/domain.md`.
+方法开发涉及议题、标签或领域约定时，分别读取 `docs/agents/issue-tracker.md`、`docs/agents/triage-labels.md`、`docs/agents/domain.md`。

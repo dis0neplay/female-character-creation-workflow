@@ -4,6 +4,8 @@
 .idea/
 
 # Private source material and backups
+/输出/
+/女性角色创作/待扩展/
 备份/
 资料库/
 资料库进度/
@@ -11,9 +13,6 @@
 
 # Repository-local utilities outside the public work package
 /工具/
-
-# Local instruction files
-/AGENTS.md
 
 # PowerShell and OS noise
 *.tmp
